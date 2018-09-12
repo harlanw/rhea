@@ -8,14 +8,15 @@
 .org 0x0
 
 main:
-	tst r0
 	ldi r16, 0xFE
+	ldi ZL, pm_lo8(foo)
+	ldi ZH, pm_hi8(foo)
 
 	call foo
 
 	break
 
-
 foo:
-	ldi r16, 0xEF
+	ldi r17, 0xED
+
 	ret

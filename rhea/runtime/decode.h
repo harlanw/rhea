@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 #define INSTR_IS_32(op) \
-	(((op) == JMP))
+	(((op) == CALL) || ((op) == JMP))
 
 enum avr_instr
 {
@@ -86,7 +86,7 @@ struct avr_opcode
 
 	union
 	{
-		int16_t k;
+		uint32_t k;
 		uint8_t a;
 		uint8_t q;
 	};
@@ -102,6 +102,6 @@ typedef struct avr_opcode op_t;
 typedef enum avr_instr instr_t;
 
 op_t avr_decode(const hw_t *hw, uint32_t addr);
-const char *avr_instr_str(enum avr_instr instr);
+const char *avr_op_str(enum avr_instr instr);
 
 #endif

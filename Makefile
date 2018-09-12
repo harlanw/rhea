@@ -1,60 +1,48 @@
-NAME = avremu
+DEBUG=1
 
-BUILD_PATH = ./build
+RHEA_BUILD_PATH = build
+RHEA_BUILD_OPTS = _POSIX_C_SOURCE=200809L USE_MEMTRACK CONSOLE_COLOR
+RHEA_SRC_PATH = rhea
 
-OPT = -O2
+RHEA = $(RHEA_BUILD_PATH)/rhea
 
 CC = gcc
-CP = objcopy
-DP = objdump
+CDEFS = $(addprefix -D, $(RHEA_BUILD_OPTS))
 
-CDEFS_LIST  = DEBUG
-CDEFS = $(addprefix -D, $(CDEFS_LIST))
+CFLAGS = -std=c99 -I./rhea $(CDEFS) \
+         -pipe \
+         -fpack-struct -fshort-enums -funsigned-char -funsigned-bitfields \
+         -Wall -Wpedantic -Werror=format-security \
+         -Werror=implicit-function-declaration \
+         -Wno-unused -Wpedantic
 
-CFLAGS  = -std=gnu99 -g -Wall -I./src $(OPT) $(CDEFS)
-CFLAGS += -fexceptions -pipe
-CFLAGS += -Wall -Werror=format-security -Werror=implicit-function-declaration -Wno-unused
+ifeq ($(DEBUG), 1)
+	CFLAGS += -g -DDEBUG
+endif
 
-SRC  = main.c
-SRC += hw/atmega328p.c
-SRC += hw/devices.c
-SRC += runtime/decode.c
-SRC += runtime/emu.c
-SRC += runtime/jit.c
-SRC += util/ihex.c util/logging.c
-SRC_PATH = ./src
+SRC = rhea.c \
+      rhea_args.c rhea_load.c rhea_utils.c \
+      rhea_ihex.c \
+      hw/data.c  hw/flash.c \
+      hw/devices.c hw/atmega328p.c \
+      runtime/emu.c runtime/decode.c
 
-OBJ = $(addsuffix .o, $(SRC))
-OBJ_PATH = $(addprefix $(BUILD_PATH)/, $(OBJ))
+OBJ = $(addprefix $(RHEA_BUILD_PATH)/, $(addsuffix .o, $(SRC)))
 
-DEPS = $(OBJ_PATH:%.o=%.d)
+DEPS = $(OBJ:%.o=%.d)
 
-BIN = $(BUILD_PATH)/$(NAME)
-
-TESTS_SRC = tests/decode_test.c
-TESTS_OBJ = $(addsuffix .o, $(TESTS_SRC))
-TESTS_DEPS = $(TESTS_OBJ:%.o=%.d)
-TESTS_BIN = $(basename $(TESTS_SRC))
-
-default: $(BIN)
+default: $(RHEA)
 	cd tests/asm && $(MAKE)
 
-$(BIN): $(OBJ_PATH)
-	$(CC) $(CFLAGS) -o $@ $(OBJ_PATH) $(LDFLAGS)
-
-
-tests: $(TESTS_BIN)
-	./tests/emu_test
-
-tests/%: tests/%.c $(addprefix src/, $(SRC))
-	$(CC) $(CFLAGS) -o $@ $@.c
+$(RHEA): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $^
 
 -include $(DEPS)
-$(BUILD_PATH)/%.c.o: $(SRC_PATH)/%.c
+$(RHEA_BUILD_PATH)/%.c.o: $(RHEA_SRC_PATH)/%.c
 	mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -c -o $@ $<
 
 clean:
-	rm -f $(OBJ_PATH)
+	rm -rf $(RHEA_BUILD_PATH)
 
-.PHONY: tests
+.PHONY: clean default

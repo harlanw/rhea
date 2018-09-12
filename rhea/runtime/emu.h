@@ -1,13 +1,12 @@
 #ifndef RHEA_EMU_H
 #define RHEA_EMU_H
 
-#include "util/ihex.h"
+#include "rhea_load.h"
 
-struct emulator;
 typedef struct emulator emu_t;
 
 emu_t *
-emu_init(char *mcu, chunk_t *chunks, uint32_t n);
+emu_init(const char *mcu, chunk_t *chunks, uint32_t n);
 
 int
 emu_run(emu_t *emu);

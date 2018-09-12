@@ -2,6 +2,8 @@
 
 #include "attributes.h"
 
+#include "hw/flash.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,7 +28,7 @@
 }
 
 const char *
-avr_instr_str(instr_t instr)
+avr_op_str(instr_t instr)
 {
 	static const char *INSTR_STR_LUT[] = 
 	{
@@ -42,7 +44,7 @@ avr_instr_str(instr_t instr)
 		"fmul", "fmuls", "fmulsu",
 
 		/* LOGIC */
-		"and", "andi", "cbr"
+		"and", "andi", "cbr",
 		"tst",
 		"eor",
 		"clr",
@@ -96,7 +98,7 @@ avr_instr_str(instr_t instr)
 		"des", "xch"
 	};
 
-	if (instr > DES)
+	if (instr > XCH)
 	{
 		instr = UNDEF;
 	}
@@ -447,7 +449,7 @@ avr_decode(const hw_t *hw, uint32_t addr)
 	op_t op;
 	instr_t instr = UNDEF;
 
-	uint16_t raw = FETCH_WORD(hw->flash, addr);
+	uint16_t raw = flash_read_word(hw->flash, addr);
 
 	switch (raw & 0xF000)
 	{
@@ -512,9 +514,11 @@ avr_decode(const hw_t *hw, uint32_t addr)
 		case MUL:
 		case OR:
 		case SUB:
+		case SBC:
 			GET_D5R5(op, raw);
 			break;
 		case ADIW:
+		case SBIW:
 			op.k = (raw & 0x00C0)>>2 | (raw & 0x000F);
 			op.rd = 24 + ((raw & 0x0030)>>3);
 			break;
@@ -523,6 +527,7 @@ avr_decode(const hw_t *hw, uint32_t addr)
 		case LDI: case SER:
 		case ORI: case SBR:
 		case SUBI:
+		case SBCI:
 			GET_D4K8(op, raw);
 			break;
 		case BCLR:
@@ -548,7 +553,7 @@ avr_decode(const hw_t *hw, uint32_t addr)
 			break;
 		case RCALL:
 		case RJMP:
-			op.k = ((int16_t)(raw<<4))>>4;
+			op.k = ((int32_t)(raw<<20))>>20;
 			break;
 		case ASR:
 		case COM:
@@ -618,18 +623,10 @@ avr_decode(const hw_t *hw, uint32_t addr)
 		case CALL:
 		case JMP:
 		{
-			// Intentionally crash the emulator when the last opcode
+			// TODO: Intentionally crash the emulator when the last opcode
 			// in memory decodes to a 32-bit instruction.
-			if (hw->pc + 2 > hw->flashend)
-			{
-				instr = UNDEF;
-				// TODO
-			}
-			else
-			{
-				uint16_t raw_lo32 = FETCH_WORD(hw->flash, hw->pc+2);
-				op.k = ((raw & 0x01F0)>>3) | (raw & 0x0001) | (raw_lo32);
-			}
+			uint16_t raw_lo32 = flash_read_word(hw->flash, addr+1);
+			op.k = ((raw & 0x01F0)>>3) | (raw & 0x0001) | (raw_lo32);
 
 			break;
 		}

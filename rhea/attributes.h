@@ -8,7 +8,7 @@
 	/**
 	 * @brief Automatic attribute definition/expansion for one or more attributes
 	 */
-	#define ATTR(attrs, ...) __attribute__((attrs, ##__VA_ARGS__))
+	#define ATTR(...) __attribute__((__VA_ARGS__))
 
 	/**
 	 * @brief Indicates a function that should run before main
